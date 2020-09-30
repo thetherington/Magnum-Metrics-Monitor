@@ -289,6 +289,7 @@ class metricsMonitor:
                 metric_type = "percentage"
                 metric_label = metric_label.replace(" (%)", "_pct")
 
+                # try to get the converted value in one go by split -> first slice -> decimal % - > round by 4 points
                 try:
                     metric_value = round(float(value.split("%")[0]) / 100, 4)
 
@@ -305,6 +306,7 @@ class metricsMonitor:
                     value = value.split(unit)[0]
 
                     byte_convert = {
+                        "B": 1,
                         "K": 1000,
                         "M": 1000000,
                         "G": 1000000000,
