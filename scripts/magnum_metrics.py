@@ -311,7 +311,7 @@ class metricsMonitor:
                         )
 
             print(json.dumps(collection_groups, indent=2))
-                print(json.dumps(collection, indent=1))
+            print(json.dumps(collection, indent=1))
 
     def CPU(self, metrics):
 
@@ -426,7 +426,6 @@ class metricsMonitor:
 
         # did not match regex right
         return None
-
 
     def Swap(self, metrics):
 
