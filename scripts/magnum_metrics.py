@@ -238,7 +238,7 @@ class metricsMonitor:
 
         for match in matchLabel:
 
-            metric_type = "core" if "CPU" in match.group(1) else "overall"
+            metric_group = "core" if "CPU" in match.group(1) else "overall"
             metric_label = match.group(1)
 
             # try to get the converted value in one go by split -> first slice -> decimal % - > round by 4 points
@@ -249,10 +249,11 @@ class metricsMonitor:
                 error = str(e)
 
             metric_collection = {
-                "s_metric_type": metric_type,
+                "s_group": metric_group,
                 "s_metricset": "cpu",
-                "s_metric_label": metric_label,
-                "s_metric_status": metric_status,
+                "s_label": metric_label,
+                "s_status": metric_status,
+                "s_type": "percentage",
             }
 
             # update the collection with exception error, otherwise put in the converted value
