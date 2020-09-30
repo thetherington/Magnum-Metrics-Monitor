@@ -209,6 +209,8 @@ class metricsMonitor:
 
                 for metric in hostCollection["health_metrics"]:
 
+                    # print(metric)
+
                     label = metric[0]
 
                     match_terms = {
