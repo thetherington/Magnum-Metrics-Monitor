@@ -215,6 +215,7 @@ class metricsMonitor:
                         "CPU": {"term": "CPU Usage:"},
                         "Memory": {"term": "System Memory:"},
                         "Swap": {"term": "Swap Memory:"},
+                        "Disk": {"term": "Disk Usage:"},
                     }
 
                     for term, params in match_terms.items():
@@ -356,6 +357,81 @@ class metricsMonitor:
             collection.update({"s_metricset": "swap"})
 
         return collection
+
+    def Disk(self, metrics):
+
+        label, value, metric_status = metrics
+        error = None
+
+        # match the metric label from 'Disk Usage: Used for /sdata' or 'Disk Usage: Free (%) for /'
+        labelPattern = re.compile(r".+:\s(.*)\s.*\s(.*)")
+        matchLabel = labelPattern.finditer(label)
+
+        for match in matchLabel:
+
+            metric_label = match.group(1)
+            metric_mount = match.group(2)
+
+            if "(%)" in metric_label:
+
+                metric_type = "percentage"
+                metric_label = metric_label.replace(" (%)", "_pct")
+
+                # try to get the converted value in one go by split -> first slice -> decimal % - > round by 4 points
+                try:
+                    metric_value = round(float(value.split("%")[0]) / 100, 4)
+
+                except Exception as e:
+                    error = str(e)
+
+            else:
+
+                metric_type = "bytes"
+
+                try:
+
+                    unit = value[-1]
+                    value = value.split(unit)[0]
+
+                    byte_convert = {
+                        "B": 1,
+                        "K": 1000,
+                        "M": 1000000,
+                        "G": 1000000000,
+                        "T": 1000000000000,
+                    }
+
+                    metric_value = int(float(value) * byte_convert[unit])
+
+                except Exception as e:
+                    error = str(e)
+
+            metric_collection = {
+                "s_metricset": "disk",
+                "s_label": metric_label,
+                "s_status": metric_status,
+                "s_type": metric_type,
+                "s_mount": metric_mount,
+            }
+
+            # update the collection with exception error, otherwise put in the converted value
+            if error:
+                metric_collection.update({"s_error": error})
+
+            else:
+
+                if metric_type == "bytes":
+
+                    metric_collection.update({"l_value": metric_value})
+
+                else:
+
+                    metric_collection.update({"d_value": metric_value})
+
+            return metric_collection
+
+        # did not match regex right
+        return None
 
 
 def main():
