@@ -3,6 +3,7 @@ import json
 import argparse
 import select
 import random
+import re
 
 
 class metricsMonitor:
@@ -187,14 +188,84 @@ class metricsMonitor:
 
             metric_results = self.get_metrics()
 
-        # else:
+        else:
 
-        #     import api_status
-        #     import importlib
+            import api_status
+            import importlib
 
-        #     importlib.reload(api_status)
+            importlib.reload(api_status)
 
-        #     metric_results = api_status.returnset(self.substituted)
+            metric_results = api_status.returnset(self.substituted)
+
+        collection = {}
+
+        if metric_results:
+
+            for hostID, hostCollection in metric_results.items():
+
+                hostname = hostCollection["hostname"]
+
+                collection = {hostname: {"metrics": []}}
+
+                for metric in hostCollection["health_metrics"]:
+
+                    label = metric[0]
+
+                    match_terms = {"CPU": {"term": "CPU Usage:"}}
+
+                    for term, params in match_terms.items():
+
+                        if params["term"] in label[: len(params["term"])]:
+
+                            func = "self.{}(metric)".format(term)
+
+                            results = eval(func)
+
+                            if isinstance(results, dict):
+
+                                collection[hostname]["metrics"].append(results)
+
+                print(json.dumps(collection, indent=1))
+
+    def CPU(self, metrics):
+
+        label, value, metric_status = metrics
+        error = None
+
+        # match the metric label from 'CPU Usage: CPU 15 (%)'
+        labelPattern = re.compile(r".+:\s(.*)\s\(.*\)")
+        matchLabel = labelPattern.finditer(label)
+
+        for match in matchLabel:
+
+            metric_type = "core" if "CPU" in match.group(1) else "overall"
+            metric_label = match.group(1)
+
+            # try to get the converted value in one go by split -> first slice -> decimal % - > round by 4 points
+            try:
+                metric_value = round(float(value.split("%")[0]) / 100, 4)
+
+            except Exception as e:
+                error = str(e)
+
+            metric_collection = {
+                "s_metric_type": metric_type,
+                "s_metricset": "cpu",
+                "s_metric_label": metric_label,
+                "s_metric_status": metric_status,
+            }
+
+            # update the collection with exception error, otherwise put in the converted value
+            if error:
+                metric_collection.update({"s_error": error})
+
+            else:
+                metric_collection.update({"d_value": metric_value})
+
+            return metric_collection
+
+        # did not match regex right
+        return None
 
 
 def main():
@@ -215,24 +286,26 @@ def main():
     group.add_argument("-d", "--dump", action="store_true", help="Dumps some json")
 
     params = {
-        "address": args.address,
+        "address": "10.9.1.31",
         #'subdata': 'client_trusty_status',
-        "verbose": args.dump,
+        "verbose": True,
     }
 
     monitor = metricsMonitor(**params)
 
-    if args.pretty:
-        pass
-        # for host, items in monitor.collect_status().items():
-        #     print(host)
+    monitor.collect_metrics()
 
-        #     for name, descr, state in (items['resources']):
-        #         print(name, descr, state)
+    # if args.pretty:
+    #     pass
+    # for host, items in monitor.collect_status().items():
+    #     print(host)
 
-    if args.dump:
-        pass
-        # print(monitor.collect_status())
+    #     for name, descr, state in (items['resources']):
+    #         print(name, descr, state)
+
+    # if args.dump:
+    #     pass
+    # print(monitor.collect_status())
 
     monitor.rpc_close()
 
