@@ -214,6 +214,7 @@ class metricsMonitor:
                     match_terms = {
                         "CPU": {"term": "CPU Usage:"},
                         "Memory": {"term": "System Memory:"},
+                        "Swap": {"term": "Swap Memory:"},
                     }
 
                     for term, params in match_terms.items():
@@ -343,6 +344,18 @@ class metricsMonitor:
 
         # did not match regex right
         return None
+
+
+    def Swap(self, metrics):
+
+        # just use the Memory function since the data is the same format
+        collection = self.Memory(metrics)
+
+        # fix the metricset value so it's term is swap instead of memory
+        if isinstance(collection, dict):
+            collection.update({"s_metricset": "swap"})
+
+        return collection
 
 
 def main():
