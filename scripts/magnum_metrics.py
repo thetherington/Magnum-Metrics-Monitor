@@ -211,7 +211,10 @@ class metricsMonitor:
 
                     label = metric[0]
 
-                    match_terms = {"CPU": {"term": "CPU Usage:"}}
+                    match_terms = {
+                        "CPU": {"term": "CPU Usage:"},
+                        "Memory": {"term": "System Memory:"},
+                    }
 
                     for term, params in match_terms.items():
 
@@ -262,6 +265,77 @@ class metricsMonitor:
 
             else:
                 metric_collection.update({"d_value": metric_value})
+
+            return metric_collection
+
+        # did not match regex right
+        return None
+
+    def Memory(self, metrics):
+
+        label, value, metric_status = metrics
+        error = None
+
+        # match the metric label from 'System Memory: Inactive'
+        labelPattern = re.compile(r".+:\s(.*)")
+        matchLabel = labelPattern.finditer(label)
+
+        for match in matchLabel:
+
+            metric_label = match.group(1)
+
+            if "(%)" in metric_label:
+
+                metric_type = "percentage"
+                metric_label = metric_label.replace(" (%)", "_pct")
+
+                try:
+                    metric_value = round(float(value.split("%")[0]) / 100, 4)
+
+                except Exception as e:
+                    error = str(e)
+
+            else:
+
+                metric_type = "bytes"
+
+                try:
+
+                    unit = value[-1]
+                    value = value.split(unit)[0]
+
+                    byte_convert = {
+                        "K": 1000,
+                        "M": 1000000,
+                        "G": 1000000000,
+                        "T": 1000000000000,
+                    }
+
+                    metric_value = int(float(value) * byte_convert[unit])
+
+                except Exception as e:
+                    error = str(e)
+
+            metric_collection = {
+                "s_metricset": "memory",
+                "s_label": metric_label,
+                "s_status": metric_status,
+                "s_type": metric_type,
+            }
+
+            # update the collection with exception error, otherwise put in the converted value
+            if error:
+                metric_collection.update({"s_error": error})
+
+            else:
+
+                if metric_type == "bytes":
+
+                    metric_collection.update({"l_value": metric_value})
+
+                else:
+
+                    metric_collection.update({"d_value": metric_value})
 
             return metric_collection
 
