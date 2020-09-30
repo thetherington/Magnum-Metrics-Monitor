@@ -205,7 +205,7 @@ class metricsMonitor:
 
                 hostname = hostCollection["hostname"]
 
-                collection = {hostname: {"metrics": []}}
+                collection.update({hostname: {"metrics": []}})
 
                 for metric in hostCollection["health_metrics"]:
 
