@@ -197,10 +197,13 @@ class metricsMonitor:
 
             metric_results = api_status.returnset(self.substituted)
 
-        collection = {}
-        collection_groups = {}
+        collection = None
+        collection_groups = None
 
         if metric_results:
+
+            collection = {}
+            collection_groups = {}
 
             for hostID, hostCollection in metric_results.items():
 
@@ -343,7 +346,7 @@ class metricsMonitor:
                                                 {x[:2] + results["s_label"].lower(): results[x]}
                                             )
 
-            return collection, collection_groups
+        return collection, collection_groups
 
     def CPU(self, metrics):
 
