@@ -343,8 +343,7 @@ class metricsMonitor:
                                                 {x[:2] + results["s_label"].lower(): results[x]}
                                             )
 
-            print(json.dumps(collection_groups, indent=2))
-            print(json.dumps(collection, indent=1))
+            return collection, collection_groups
 
     def CPU(self, metrics):
 
