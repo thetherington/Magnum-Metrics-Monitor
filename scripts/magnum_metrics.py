@@ -30,6 +30,7 @@ class metricsMonitor:
             if ("subdata" in key) and (value):
                 self.substituted = value
 
+        if not self.substituted:
         self.rpc_connect()
 
     def do_ping(self):
