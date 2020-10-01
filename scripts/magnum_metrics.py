@@ -31,7 +31,7 @@ class metricsMonitor:
                 self.substituted = value
 
         if not self.substituted:
-        self.rpc_connect()
+            self.rpc_connect()
 
     def do_ping(self):
 
@@ -652,12 +652,10 @@ def main():
         description="Magnum RPC-JSON API Poller program for system health metrics "
     )
 
-    parser.add_argument(
-        "-IP", "--address", metavar="127.0.0.1", required=True, help="Magnum Cluster IP Address"
-    )
-    parser.add_argument(
-        "-z", "--fakeit", metavar="", required=False, help="supplement some fake data"
-    )
+    group = parser.add_mutually_exclusive_group(required=True)
+
+    group.add_argument("-IP", "--address", metavar="127.0.0.1", help="Magnum Cluster IP Address")
+    group.add_argument("-z", "--fakeit", metavar="", help="supplement some fake data")
 
     args = parser.parse_args()
     # args = parser.parse_args(["--address", "10.9.1.32"])
