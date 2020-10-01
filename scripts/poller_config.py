@@ -25,21 +25,23 @@ class Plugin(InsitePlugin):
 
         collection, collection_group = self.monitor.collect_metrics()
 
-        for server, metrics in collection_group.items():
+        if collection and collection_group:
 
-            for metric in self.monitor.list_metrics(metrics):
+            for server, metrics in collection_group.items():
 
-                document = {"fields": metric, "host": server, "name": "groups"}
+                for metric in self.monitor.list_metrics(metrics):
 
-                documents.append(document)
+                    document = {"fields": metric, "host": server, "name": "groups"}
 
-        for server, parts in collection.items():
+                    documents.append(document)
 
-            for metric in parts["metrics"]:
+            for server, parts in collection.items():
 
-                document = {"fields": metric, "host": server, "name": "metrics"}
+                for metric in parts["metrics"]:
 
-                documents.append(document)
+                    document = {"fields": metric, "host": server, "name": "metrics"}
+
+                    documents.append(document)
 
         return json.dumps(documents)
 
