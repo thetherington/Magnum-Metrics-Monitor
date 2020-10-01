@@ -625,6 +625,23 @@ class metricsMonitor:
         # did not match regex right
         return None
 
+    def list_metrics(self, metrics_group):
+
+        metric_list = []
+        for _, metrics in metrics_group.items():
+
+            for _, sub_metrics in metrics.items():
+
+                try:
+                    if sub_metrics.keys():
+                        metric_list.append(sub_metrics)
+
+                except Exception as e:
+                    metric_list.append(metrics)
+                    break
+
+        return metric_list
+
 
 def main():
 
