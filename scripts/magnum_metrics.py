@@ -219,6 +219,7 @@ class metricsMonitor:
                         "Memory": {"term": "System Memory:"},
                         "Swap": {"term": "Swap Memory:"},
                         "Disk": {"term": "Disk Usage:"},
+                        "Network": {"term": "Ethernet:"},
                     }
 
                     for term, params in match_terms.items():
@@ -296,9 +297,44 @@ class metricsMonitor:
                                                 {x[:2] + results["s_label"].lower(): results[x]}
                                             )
 
+                                # network has nested interface objects with keys for each {"eth1" : {..}}
+                                elif results["s_metricset"] == "network":
+
+                                    network_collection = host_collection["network"]
+
+                                    if "s_metricset" in network_collection.keys():
+                                        network_collection.pop("s_metricset", None)
+
+                                    if results["s_interface"] not in network_collection.keys():
+                                        network_collection.update(
+                                            {
+                                                results["s_interface"]: {
+                                                    "s_metricset": results["s_metricset"],
+                                                    "s_interface": results["s_interface"],
+                                                }
+                                            }
+                                        )
+
+                                    interface_collection = network_collection[
+                                        results["s_interface"]
+                                    ]
+
+                                    for x in ["s_value", "l_value"]:
+
+                                        if x in results.keys():
+
+                                            interface_collection.update(
+                                                {
+                                                    x[:2]
+                                                    + results["s_label"]
+                                                    .lower()
+                                                    .replace(" ", "_"): results[x]
+                                                }
+                                            )
+
+                                # handles memory and swap metrics
                                 else:
 
-                                    # handles memory and swap metrics
                                     for x in ["d_value", "l_value"]:
 
                                         if x in results.keys():
@@ -504,6 +540,85 @@ class metricsMonitor:
                 else:
 
                     metric_collection.update({"d_value": metric_value})
+
+            return metric_collection
+
+        # did not match regex right
+        return None
+
+    def Network(self, metrics):
+
+        label, value, metric_status = metrics
+        error = None
+
+        # match the metric label from 'Ethernet: eth2 Link Status' or 'Ethernet: eth0 TX Packets'
+        labelPattern = re.compile(r".+:\s(.*[0-9])\s(.*)")
+        matchLabel = labelPattern.finditer(label)
+
+        for match in matchLabel:
+
+            metric_label = match.group(2)
+            metric_interface = match.group(1)
+
+            # trying to imply bytes or just the word counter based on the label
+            metric_type = "bytes" if "Bytes" in metric_label else "counter"
+
+            try:
+
+                byte_convert = {
+                    "B": 1,
+                    "K": 1000,
+                    "M": 1000000,
+                    "G": 1000000000,
+                    "T": 1000000000000,
+                }
+
+                if isinstance(value, str):
+
+                    unit = value[-1]
+
+                    # just incase a legit string number comes in without a suffix. ::eyeroll::
+                    if unit not in byte_convert.keys():
+                        unit = "B"
+
+                    value = value.split(unit)[0]
+
+                    metric_value = int(float(value) * byte_convert[unit])
+
+                # some values come in directly either a integer or float for some reason. bit of a mess
+                elif isinstance(value, float) or isinstance(value, int):
+                    metric_value = int(value)
+
+            except Exception as e:
+
+                # not elegant but handle those strings. probably going to create wierd issues
+                if "string to float" in str(e):
+
+                    metric_value = value
+                    metric_type = "string"
+
+                else:
+                    error = str(e)
+
+            metric_collection = {
+                "s_metricset": "network",
+                "s_label": metric_label,
+                "s_status": metric_status,
+                "s_type": metric_type,
+                "s_interface": metric_interface,
+            }
+
+            # update the collection with exception error, otherwise put in the converted value
+            if error:
+                metric_collection.update({"s_error": error})
+
+            else:
+
+                if metric_type == "bytes" or metric_type == "counter":
+                    metric_collection.update({"l_value": metric_value})
+
+                else:
+                    metric_collection.update({"s_value": metric_value})
 
             return metric_collection
 
