@@ -658,31 +658,28 @@ def main():
         "-z", "--fakeit", metavar="", required=False, help="supplement some fake data"
     )
 
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("-p", "--pretty", action="store_true", help="Print something pretty")
-    group.add_argument("-d", "--dump", action="store_true", help="Dumps some json")
+    args = parser.parse_args()
+    # args = parser.parse_args(["--address", "10.9.1.32"])
 
     params = {
-        "address": "10.9.1.31",
-        #'subdata': 'client_trusty_status',
+        "address": args.address,
+        "subdata": args.fakeit,
         "verbose": True,
     }
 
     monitor = metricsMonitor(**params)
 
-    monitor.collect_metrics()
+    collection, collection_group = monitor.collect_metrics()
 
-    # if args.pretty:
-    #     pass
-    # for host, items in monitor.collect_status().items():
-    #     print(host)
+    if collection and collection_group:
 
-    #     for name, descr, state in (items['resources']):
-    #         print(name, descr, state)
+        for host, metrics in collection_group.items():
 
-    # if args.dump:
-    #     pass
-    # print(monitor.collect_status())
+            for metric in monitor.list_metrics(metrics):
+
+                print(host, json.dumps(metric, indent=2))
+
+            print("{} metrics for {}".format(len(collection[host]["metrics"]), host), "\n")
 
     monitor.rpc_close()
 
