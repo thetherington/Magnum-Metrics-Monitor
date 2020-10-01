@@ -198,6 +198,7 @@ class metricsMonitor:
             metric_results = api_status.returnset(self.substituted)
 
         collection = {}
+        collection_groups = {}
 
         if metric_results:
 
@@ -232,83 +233,79 @@ class metricsMonitor:
 
                                 collection[hostname]["metrics"].append(results)
 
-            ## rebuild metrics into groups. scans through each metrics and creates a tree grouping together the metrics
-            ## label becomes a key and the value is the value for key
-            collection_groups = {}
+                                ## rebuild results into groups. scans through each metrics and creates a tree grouping together the metrics
+                                ## label becomes a key and the value is the value for key
 
-            for host, items in collection.items():
+                                if hostname not in collection_groups.keys():
+                                    collection_groups.update({hostname: {}})
 
-                for metric in items["metrics"]:
+                                host_collection = collection_groups[hostname]
 
-                    if host not in collection_groups.keys():
+                                # check whether the metricset object is in the dictionary and
+                                # add it if it isn't.
+                                if results["s_metricset"] not in host_collection.keys():
 
-                        collection_groups.update({host: {}})
+                                    host_collection.update(
+                                        {
+                                            results["s_metricset"]: {
+                                                "s_metricset": results["s_metricset"]
+                                            }
+                                        }
+                                    )
 
-                    host_collection = collection_groups[host]
+                                # cpu: remove the space in label and create a core count number
+                                if results["s_metricset"] == "cpu":
 
-                    if metric["s_metricset"] not in host_collection.keys():
+                                    cpu_collection = host_collection["cpu"]
 
-                        host_collection.update(
-                            {metric["s_metricset"]: {"s_metricset": metric["s_metricset"]}}
-                        )
+                                    cpu_collection.update(
+                                        {
+                                            "d_"
+                                            + results["s_label"]
+                                            .replace(" ", "_")
+                                            .lower(): results["d_value"],
+                                            "i_core_count": len(cpu_collection.keys()) - 2,
+                                        },
+                                    )
 
-                    # cpu remove the space in label and create a core count number
-                    if metric["s_metricset"] == "cpu":
+                                # disk has nested mount objects with keys for each {"/" : {..}}
+                                elif results["s_metricset"] == "disk":
 
-                        cpu_collection = host_collection["cpu"]
+                                    disk_collection = host_collection["disk"]
 
-                        cpu_collection.update(
-                            {
-                                "d_"
-                                + metric["s_label"].replace(" ", "_").lower(): metric["d_value"],
-                                "i_core_count": len(cpu_collection.keys()) - 2,
-                            },
-                        )
+                                    if "s_metricset" in disk_collection.keys():
+                                        disk_collection.pop("s_metricset", None)
 
-                    # disk has nested mount objects with keys for each
-                    elif metric["s_metricset"] == "disk":
+                                    if results["s_mount"] not in disk_collection.keys():
+                                        disk_collection.update(
+                                            {
+                                                results["s_mount"]: {
+                                                    "s_metricset": results["s_metricset"],
+                                                    "s_mount": results["s_mount"],
+                                                }
+                                            }
+                                        )
 
-                        disk_collection = host_collection["disk"]
+                                    mount_collection = disk_collection[results["s_mount"]]
 
-                        if "s_metricset" in disk_collection.keys():
-                            disk_collection.pop("s_metricset", None)
+                                    for x in ["d_value", "l_value"]:
 
-                        if metric["s_mount"] not in disk_collection.keys():
-                            disk_collection.update(
-                                {
-                                    metric["s_mount"]: {
-                                        "s_metricset": metric["s_metricset"],
-                                        "s_mount": metric["s_mount"],
-                                    }
-                                }
-                            )
+                                        if x in results.keys():
 
-                        mount_collection = disk_collection[metric["s_mount"]]
+                                            mount_collection.update(
+                                                {x[:2] + results["s_label"].lower(): results[x]}
+                                            )
 
-                        if "d_value" in metric.keys():
+                                else:
 
-                            mount_collection.update(
-                                {"d_" + metric["s_label"].lower(): metric["d_value"]}
-                            )
+                                    # handles memory and swap metrics
+                                    for x in ["d_value", "l_value"]:
 
-                        elif "l_value" in metric.keys():
+                                        if x in results.keys():
 
-                            mount_collection.update(
-                                {"l_" + metric["s_label"].lower(): metric["l_value"]}
-                            )
-
-                    # handles memory and swap metrics
-                    elif "d_value" in metric.keys():
-
-                        host_collection[metric["s_metricset"]].update(
-                            {"d_" + metric["s_label"].lower(): metric["d_value"]}
-                        )
-
-                    elif "l_value" in metric.keys():
-
-                        host_collection[metric["s_metricset"]].update(
-                            {"l_" + metric["s_label"].lower(): metric["l_value"]}
-                        )
+                                            host_collection[results["s_metricset"]].update(
+                                                {x[:2] + results["s_label"].lower(): results[x]}
+                                            )
 
             print(json.dumps(collection_groups, indent=2))
             print(json.dumps(collection, indent=1))
