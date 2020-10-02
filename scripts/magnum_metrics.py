@@ -107,7 +107,7 @@ class metricsMonitor:
         def empty_socket(sock):
             """remove the data present on the socket"""
             while True:
-                inputready, o, e = select.select([sock], [], [], 0)
+                inputready, _, _ = select.select([sock], [], [], 0)
                 if len(inputready) == 0:
                     break
                 for s in inputready:
@@ -206,7 +206,7 @@ class metricsMonitor:
             collection = {}
             collection_groups = {}
 
-            for hostID, hostCollection in metric_results.items():
+            for _, hostCollection in metric_results.items():
 
                 hostname = hostCollection["hostname"]
 
@@ -639,7 +639,7 @@ class metricsMonitor:
                     if sub_metrics.keys():
                         metric_list.append(sub_metrics)
 
-                except Exception as e:
+                except Exception as _:
                     metric_list.append(metrics)
                     break
 
@@ -658,7 +658,7 @@ def main():
     group.add_argument("-z", "--fakeit", metavar="", help="supplement some fake data")
 
     args = parser.parse_args()
-    # args = parser.parse_args(["--address", "10.9.1.32"])
+    # args = parser.parse_args(["--address", "10.9.1.31"])
 
     params = {
         "address": args.address,
