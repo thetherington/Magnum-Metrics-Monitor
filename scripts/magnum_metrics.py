@@ -224,6 +224,7 @@ class metricsMonitor:
                         "Swap": {"term": "Swap Memory:"},
                         "Disk": {"term": "Disk Usage:"},
                         "Network": {"term": "Ethernet:"},
+                        "Load": {"term": "Load:"},
                     }
 
                     for term, params in match_terms.items():
@@ -336,7 +337,7 @@ class metricsMonitor:
                                                 }
                                             )
 
-                                # handles memory and swap metrics
+                                # handles memory, swap metrics, and load metrics
                                 else:
 
                                     for x in ["d_value", "l_value"]:
@@ -344,7 +345,12 @@ class metricsMonitor:
                                         if x in results.keys():
 
                                             host_collection[results["s_metricset"]].update(
-                                                {x[:2] + results["s_label"].lower(): results[x]}
+                                                {
+                                                    x[:2]
+                                                    + results["s_label"]
+                                                    .lower()
+                                                    .replace(" ", "_"): results[x]
+                                                }
                                             )
 
         return collection, collection_groups
@@ -622,6 +628,48 @@ class metricsMonitor:
 
                 else:
                     metric_collection.update({"s_value": metric_value})
+
+            return metric_collection
+
+        # did not match regex right
+        return None
+
+    def Load(self, metrics):
+
+        label, value, metric_status = metrics
+        error = None
+
+        # match the metric label from 'Load: Fifteen Minute Average'
+        labelPattern = re.compile(r".+:\s(.*)")
+        matchLabel = labelPattern.finditer(label)
+
+        for match in matchLabel:
+
+            metric_label = match.group(1)
+
+            metric_type = "string"
+
+            try:
+
+                metric_value = float(value)
+
+            except Exception as e:
+                error = str(e)
+
+            metric_collection = {
+                "s_metricset": "load",
+                "s_label": metric_label,
+                "s_status": metric_status,
+                "s_type": metric_type,
+            }
+
+            # update the collection with exception error, otherwise put in the converted value
+            if error:
+                metric_collection.update({"s_error": error})
+
+            else:
+
+                metric_collection.update({"d_value": metric_value})
 
             return metric_collection
 
