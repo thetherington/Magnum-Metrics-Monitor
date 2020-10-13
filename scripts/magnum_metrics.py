@@ -647,7 +647,7 @@ class metricsMonitor:
 
             metric_label = match.group(1)
 
-            metric_type = "string"
+            metric_type = "number"
 
             try:
 
